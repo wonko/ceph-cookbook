@@ -1,0 +1,16 @@
+= DESCRIPTION:
+
+Ceph cookbook - ceph.newdream.net
+
+= REQUIREMENTS:
+
+Have a correctly setup box - able to connect to the short hostnames (either fix resolv.conf or /etc/hosts)
+
+= ATTRIBUTES:
+
+= USAGE:
+
+All attributes are namespaced within ceph. (so, node[:ceph][...])
+
+There is a ceph cluster, defined by the 'clustername' attribute. All nodes having the same clustername will join forces.
+
