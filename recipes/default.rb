@@ -4,6 +4,8 @@
 include_recipe "apt"
 include_recipe "ceph::user_management"
 
+puts "This is CEPH - clustername is #{node[:ceph][:clustername]}"
+
 apt_repository "ceph" do
   uri "http://ceph.newdream.net/debian/"
   distribution node['lsb']['codename'] 
@@ -12,7 +14,6 @@ apt_repository "ceph" do
   action :add
 end
 
-# ... to install ceph
 package "ceph"
 
 group "ceph"
@@ -43,39 +44,22 @@ template "/etc/ceph/ceph.conf" do
         )
 end
 
-if node[:ceph][:osd][:enabled]
-  my_index = osds.index {|n| n[:fqdn] == node[:fqdn]}
-  puts "I am OSD #{my_index}!"
+config = data_bag_item('ceph', node['ceph']['clustername'])
 
-  directory node[:ceph][:defaults][:osd][:data].gsub("$id", my_index.to_s) do
-    owner "root"
-    group "root"
-    mode "0755"
-    recursive true
-    action :create
-  end  
+config["osds"].each do |index, osdconfig|
+  next unless osdconfig['node'] == node[:hostname] # only process the osd entries on this node
 
-  directory node[:ceph][:defaults][:osd][:journal].gsub("$id", my_index.to_s) do
-    owner "root"
-    group "root"
-    mode "0755"
-    recursive true
-    action :create
-  end  
+  puts "OSD #{index}: #{osdconfig['datadevice']}"
+  ceph_osd index do 
+    datadevice      osdconfig['datadevice']
+    journaldevice   osdconfig['journaldevice']
+  end
 end
 
 if node[:ceph][:mon][:enabled]
   my_index = mons.index {|n| n[:fqdn] == node[:fqdn]}
   puts "I am MON #{my_index}!"
-  
-  directory node[:ceph][:defaults][:mon][:data].gsub("$id", my_index.to_s) do
-    owner "root"
-    group "root"
-    mode "0755"
-    recursive true
-    action :create
-  end  
-  
+  ceph_mon my_index 
 else
   puts "Not doing MON stuff"
 end
@@ -86,3 +70,5 @@ if node[:ceph][:mds][:enabled]
 else
   puts "Not doing MDS stuff"
 end
+
+ceph_configfile "/etc/ceph/ceph.conf"

@@ -1,0 +1,17 @@
+# config generated for Ceph cluster <%= node[:ceph][:clustername] %> by CHEF - do not modify
+
+[global]
+	auth supported = <%= node[:ceph][:defaults][:global][:auth_supported] %>
+	keyring = <%= node[:ceph][:defaults][:global][:keyring] %>
+
+# default info
+[mon]
+	mon data = <%= node[:ceph][:defaults][:mon][:data] %>
+
+[mds]
+
+[osd]
+	osd data = <%= node[:ceph][:defaults][:osd][:data] %>
+	osd journal = <%= node[:ceph][:defaults][:osd][:journal] %>
+	osd journal size = <%= node[:ceph][:defaults][:osd][:journal_size] %>
+

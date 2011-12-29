@@ -12,14 +12,14 @@ default[:ceph][:defaults][:global][:auth_supported] = "cephx"
 default[:ceph][:defaults][:global][:keyring] = "/etc/ceph/$name.keyring"
 
 # mon
-default[:ceph][:defaults][:mon][:data] = "/srv/mon.$id"
+default[:ceph][:defaults][:mon][:data] = "/ceph/mon/$id"
 
 # mds
 #default[:ceph][:defaults][:mds][:] = ""
 
 # osd
-default[:ceph][:defaults][:osd][:data] = "/srv/osd.$id"
-default[:ceph][:defaults][:osd][:journal] = "/srv/journals/osd.$id.journal"
+default[:ceph][:defaults][:osd][:data] = "/ceph/osd/$id"
+default[:ceph][:defaults][:osd][:journal] = "/ceph/osdjournals/$id/journal"
 default[:ceph][:defaults][:osd][:journal_size] = "1000"
 
 # per node specific configurations
