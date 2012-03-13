@@ -18,10 +18,22 @@ action :create do
     recursive true
     action :create
   end
-
-  # ensure the content of fstab
-  execute "Add the data dir to the fstab for OSD #{new_resource.index}" do
-    command "echo '#{new_resource.datadevice} /ceph/osd/#{new_resource.index} btrfs defaults 0 0' >> /etc/fstab"
-    not_if "grep '#{new_resource.datadevice}' /etc/fstab"
+  
+  # create a key
+  execute "Creating a private key for OSD #{new_resource.index}" do
+    command "/usr/bin/ceph-authtool --create-keyring --gen-key -n osd.#{new_resource.index} /etc/ceph/keyring.osd.#{new_resource.index}"
+    action :run
+    not_if "test -f /etc/ceph/keyring.osd.#{new_resource.index}"
   end
+end
+
+action :add_secret_to_attributes do
+  # storing the key in the secret attribute
+  node.set[:ceph][:osd][:secret] = `/usr/bin/ceph-authtool -p -n osd.#{new_resource.index} /etc/ceph/keyring.osd.#{new_resource.index}`.strip  
+end
+  
+
+action :format do 
+  # format the object store
+  
 end
