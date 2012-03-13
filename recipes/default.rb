@@ -1,8 +1,8 @@
 # Ceph cookbooks - as the Ceph-people don't release theirs to work with...
 
 # we use the official ceph repo
-include_recipe "apt"
-include_recipe "ceph::user_management"
+#include_recipe "apt"
+#include_recipe "ceph::user_management"
 
 puts "This is CEPH - clustername is #{node[:ceph][:clustername]}"
 
@@ -23,13 +23,13 @@ apt_repository "ceph-autobuild-master" do
 end
 
 package "ceph"
+package "ceph-common"
 
-group "ceph"
-user "ceph" do
-  comment "ceph user"
-  group "ceph"
-end
-
+#group "ceph"
+# user "ceph" do
+#   comment "ceph user"
+#   group "ceph"
+# end
 
 groupnodes = search("node", "ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
 mdss = search("node", "ceph_mds_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
@@ -51,6 +51,8 @@ template "/etc/ceph/ceph.conf" do
           :osds => osds
         )
 end
+
+return
 
 config = data_bag_item('ceph', node['ceph']['clustername'])
 
