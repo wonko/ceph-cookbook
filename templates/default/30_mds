@@ -1,3 +1,0 @@
-# MDS <%= @index %>
-[mds.<%= @index %>]
-	host = <%= @hostname %>

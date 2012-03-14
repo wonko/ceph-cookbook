@@ -1,3 +1,0 @@
-[osd.<%= @index %>]
-	host = <%= @hostname %>
-    btrfs devs = <%= @osdconfig['datadevice'] %>

@@ -1,3 +1,0 @@
-[mon.<%= @index %>]
-	host = <%= @hostname %>
-	mon addr = <%= @ipaddress.to_s + ":" + @port.to_s %>
