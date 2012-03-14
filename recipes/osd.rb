@@ -1,30 +1,22 @@
 # makes the node a Ceph OSD 
+
+# we need at least a master...
+master_mons = search("node", "ceph_master:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
+
+if master_mons.size == 0
+  puts "No master found - not configuring this OSD"
+end
+
 node[:ceph][:osd][:enabled] = true
 
 include_recipe "ceph::default"
 
-osds = search("node", "ceph_osd_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
-other_osds = search("node", "(ceph_osd_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}) NOT hostname:#{node[:hostname]}", "X_CHEF_id_CHEF_X asc") || []
+ceph_osd "Create the ceph OSD" do
+  action :create
+end unless node.ceph.osd.attribute?(:index)
 
-unless node.ceph.osd.attribute?(:index)
-  puts "This osd has no index assigned - searching for one"
-  max_index = -1
-
-  other_osds.each do |osd|
-    max_index = osd[:ceph][:osd][:index] if osd[:ceph][:osd][:index] > max_index
-  end unless other_osds.empty?
-
-  node.normal[:ceph][:osd][:index] = max_index + 1
-
-  puts "Assigned index is #{node[:ceph][:osd][:index]}"
-
-  node.save
-
-  ceph_osd node[:ceph][:osd][:index] do
-    action :create
-  end
-end
-
-ceph_osd node[:ceph][:osd][:index] do
-  action :add_secret_to_attributes
-end
+ceph_osd "Format the ceph OSD" do
+  action :format
+  index node[:ceph][:osd][:index]
+  not_if "test -e /ceph/osd/#{node[:ceph][:osd][:index]}/magic"
+end 

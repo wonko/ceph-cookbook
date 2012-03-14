@@ -23,8 +23,6 @@ end
 package "ceph"
 package "ceph-common"
 
-# lets check our index numbers
-
 ceph_config "Default ceph config" do
   action :create
 end
