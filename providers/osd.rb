@@ -16,15 +16,8 @@ action :format do
     i_am_a_osd true
   end
 
-  # we need a monmap - the master has this
-  # we get the admin key - store it - use it to extract the monmap
-  master_mons = search("node", "(ceph_mon_enabled:true AND ceph_master:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment})", "X_CHEF_id_CHEF_X asc") || []
-  master = master_mons.first
-  master_secret = master[:ceph][:admin_secret]
-
-  execute "Create the client.admin keyring" do
-    command "/usr/bin/ceph-authtool --create-keyring -n client.admin --add-key #{master_secret} /etc/ceph/client.admin.keyring"
-    action :run
+  ceph_keyring "client.admin" do
+    secret get_master_secret
     not_if "test -e /etc/ceph/client.admin.keyring"
   end
 
