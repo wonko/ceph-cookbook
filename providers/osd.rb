@@ -4,7 +4,6 @@ action :create do
   i = index(:osd)
 
   ceph_keyring "osd.#{i}" do
-    force_overwrite true
     action [:create, :add, :store]
   end
 end
