@@ -7,87 +7,71 @@ action :create do
     action :create
   end
 
-  if !node.ceph.mon.attribute?(:index) 
-    puts "This mon has no index assigned - searching for one"
-    max_index = -1
+  i = index :mon
 
-    other_mons = search("node", "(ceph_mon_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}) NOT hostname:#{node[:hostname]}", "X_CHEF_id_CHEF_X asc") || []
+  if i == 0
+    # we are the first mon - lets be the "master" who will hold the initial monmap
+    node.set[:ceph][:master] = true
 
-    other_mons.each do |mon|
-      max_index = mon[:ceph][:mon][:index] if mon[:ceph][:mon][:index] > max_index
-    end unless other_mons.empty?
-
-    node.set[:ceph][:mon][:index] = max_index + 1
-    node.save
-
-    puts "Assigned index is #{node[:ceph][:mon][:index]}"
-
-    if node[:ceph][:mon][:index] == 0
-      # force rewrite of the config, and force myself to be a mon in this config
-      ceph_config "Default ceph config" do
-        action :create
-        i_am_a_mon true
-      end
-
-      directory "/tmp/mon-init" do
-        owner "root"
-        group "root"
-        mode "0755"
-        action :create
-      end
-
-      execute "CEPH INIT: Preparing the monmap" do
-        command "/sbin/mkcephfs -d /tmp/mon-init -c /etc/ceph/ceph.conf --prepare-monmap"
-        action :run
-      end
-
-      execute "CEPH INIT: Creating an osdmap" do
-        command "/usr/bin/osdmaptool --clobber --create-from-conf /tmp/mon-init/osdmap -c /etc/ceph/ceph.conf"
-        action :run
-      end
-
-      execute "CEPH INIT: Creating admin keyring" do
-        command "/usr/bin/ceph-authtool --create-keyring --gen-key -n client.admin /etc/ceph/keyring.admin"
-        action :run
-      end
-
-      # get the admin key with this server
-      ruby_block "storing the admin secret on the master node" do
-        block do
-          admin_secret = `/usr/bin/ceph-authtool -p -n client.admin /etc/ceph/keyring.admin`.strip
-          node.set[:ceph][:master] = true
-          node.set[:ceph][:admin_secret] = admin_secret
-          node.save
-        end
-        action :create
-      end
+    ceph_keyring "client.admin" do
+      action [:create, :add, :store]
     end
   end
 end
 
-action :add_secret_to_attributes do
-  # storing the key in the secret attribute
-  node.set[:ceph][:mon][:secret] = `/usr/bin/ceph-authtool -p -n mon. /etc/ceph/keyring.mon`.strip  
-  node.save
+action :initialize do 
+  i = @new_resource.index ? @new_resource.index : index(:mon)
+
+  puts "Mon::initialize: Index is #{i}"
+
+  ceph_keyring "mon.#{i}" do
+    action [:create, :add, :store]
+    keyname "mon." # WTF?
+  end
+
+  ceph_keyring "mon.#{i}" do
+    action :add
+    secret get_master_secret
+    keyname "client.admin"
+    authtool_options "--set-uid=0 --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow'"
+  end
+
+  directory "/tmp/mon-init" do
+    owner "root"
+    group "root"
+    mode "0755"
+    action :create
+  end
+
+  # either we are the first mon (master), either we are a backup mon (not master)
+  if node[:ceph].attribute?(:master) && node[:ceph][:master]
+    ceph_config "Default ceph config" do
+      action :create
+      i_am_a_mon true
+    end
+
+    execute "CEPH MASTER INIT: Preparing the monmap" do
+      command "/sbin/mkcephfs -d /tmp/mon-init -c /etc/ceph/ceph.conf --prepare-monmap"
+      action :run
+    end
+
+    execute "CEPH MASTER INIT: Creating an osdmap" do
+      command "/usr/bin/osdmaptool --clobber --create-from-conf /tmp/mon-init/osdmap -c /etc/ceph/ceph.conf"
+      action :run
+    end
+    
+  else
+    # get the monmap/osdmap from a running mon
+    # TODO
+  end
+  
+  execute "Prepare the monitors file structure" do
+    command "/usr/bin/ceph-mon -c /etc/ceph/ceph.conf --mkfs -i #{node[:ceph][:mon][:index]} --monmap /tmp/mon-init/monmap --osdmap /tmp/mon-init/osdmap -k /etc/ceph/mon.#{node[:ceph][:mon][:index]}.keyring"
+    action :run
+  end
 end
 
-
-action :initialize do 
-
-  master_mons = search("node", "(ceph_master:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}) NOT hostname:#{node[:hostname]}", "X_CHEF_id_CHEF_X asc") || []
-
-  admin_secret = node[:ceph][:master] ? node[:ceph][:admin_secret] : master_mons.first[:ceph][:admin_secret]
-
-  execute "Adding the client.admin key to the monitor keyring" do
-    command "/usr/bin/ceph-authtool --create-keyring -n client.admin --add-key #{admin_secret} --set-uid=0 --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow' /etc/ceph/keyring.mon"
-    action :run
-  end
-
-  execute "Create a new monitor key for mon." do
-    command "/usr/bin/ceph-authtool --gen-key -n mon. /etc/ceph/keyring.mon"
-    action :run
-  end
-
+action :set_all_permissions do
   # setting all the capabilities for the osds and mdss
   mdss = search("node", "ceph_mds_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
 
@@ -106,10 +90,5 @@ action :initialize do
       action :run
       only_if { osd.ceph.osd.attribute?(:secret) }
     end    
-  end
-
-  execute "Prepare the monitors file structure" do
-    command "/usr/bin/ceph-mon -c /etc/ceph/ceph.conf --mkfs -i #{node[:ceph][:mon][:index]} --monmap /tmp/mon-init/monmap --osdmap /tmp/mon-init/osdmap -k /etc/ceph/keyring.mon"
-    action :run
   end
 end
