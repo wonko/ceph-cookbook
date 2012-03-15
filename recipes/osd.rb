@@ -13,7 +13,7 @@ include_recipe "ceph::default"
 
 ceph_osd "Create the ceph OSD" do
   action :create
-end unless node.ceph.osd.attribute?(:index)
+end #unless node.ceph.osd.attribute?(:index)
 
 ceph_osd "Format the ceph OSD" do
   action :format

@@ -1,35 +1,11 @@
 # OSD provider
 
 action :create do
-  
-  unless node.ceph.osd.attribute?(:index)
-    puts "This osd has no index assigned - searching for one"
-    max_index = -1
+  i = index(:osd)
 
-    other_osds = search("node", "(ceph_osd_enabled:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}) NOT hostname:#{node[:hostname]}", "X_CHEF_id_CHEF_X asc") || []
-
-    other_osds.each do |osd|
-      max_index = osd[:ceph][:osd][:index] if osd[:ceph][:osd][:index] > max_index
-    end unless other_osds.empty?
-
-    node.normal[:ceph][:osd][:index] = max_index + 1
-    node.save
-
-    puts "Assigned index is #{node[:ceph][:osd][:index]}"
-
-    # keyring for the new OSD
-    execute "Creating a private key for OSD #{new_resource.index}" do
-      command "/usr/bin/ceph-authtool --create-keyring --gen-key -n osd.#{node[:ceph][:osd][:index]} /etc/ceph/osd.#{node[:ceph][:osd][:index]}.keyring"
-      action :run
-      not_if "test -f /etc/ceph/osd.#{node[:ceph][:osd][:index]}.keyring"
-    end
-
-    ruby_block "Store secret from the keyring to the attributes" do
-      block do
-        node.set[:ceph][:osd][:secret] = `/usr/bin/ceph-authtool -p -n osd.#{node[:ceph][:osd][:index]} /etc/ceph/osd.#{node[:ceph][:osd][:index]}.keyring`.strip
-      end
-      action :create
-    end
+  ceph_keyring "osd.#{i}" do
+    force_overwrite true
+    action [:create, :add, :store]
   end
 end
 
@@ -81,7 +57,7 @@ action :format do
     not_if "mount | grep '#{node[:ceph][:osd][:datadevice]}'"
   end
 
-  mount "/ceph/osd/#{new_resource.index}" do
+  mount "/ceph/osd/#{node[:ceph][:osd][:index]}" do
     device node[:ceph][:osd][:datadevice]
     fstype "ext4"
     options "user_xattr"
