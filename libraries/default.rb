@@ -22,7 +22,7 @@ def get_master_secret
   master_mons = search("node", "ceph_master:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
   
   if (master_mons.size == 0) # allow chef server to reindex my data...
-    sleep 5
+    sleep 10
     master_mons = search("node", "ceph_master:true AND ceph_clustername:#{node['ceph']['clustername']} AND chef_environment:#{node.chef_environment}", "X_CHEF_id_CHEF_X asc") || []
   end
 

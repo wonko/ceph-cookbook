@@ -15,6 +15,7 @@ action :create do
 
     ceph_keyring "client.admin" do
       action [:create, :add, :store]
+      not_if "test -e /etc/ceph/client.admin.keyring"
     end
   end
 end

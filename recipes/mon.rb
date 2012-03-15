@@ -13,7 +13,7 @@ end
 
 ceph_mon "Initializing the monitor FS" do
   action :initialize
-#  not_if "test -f /ceph/mon/#{node[:ceph][:mon][:index]}/magic"
+  not_if "test -f /ceph/mon/#{node[:ceph][:mon][:index]}/magic"
 end
 
 # TODO - verify if at least one mon is live...
