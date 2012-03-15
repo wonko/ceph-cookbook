@@ -1,13 +1,13 @@
 action :create do
-  directory "/ceph/mon/#{new_resource.index}" do
+  i = index :mon
+
+  directory "/ceph/mon/#{i}" do
     owner "root"
     group "root"
     mode "0755"
     recursive true
     action :create
   end
-
-  i = index :mon
 
   if i == 0
     # we are the first mon - lets be the "master" who will hold the initial monmap
@@ -22,8 +22,6 @@ end
 
 action :initialize do 
   i = @new_resource.index ? @new_resource.index : index(:mon)
-
-  puts "Mon::initialize: Index is #{i}"
 
   ceph_keyring "mon.#{i}" do
     action [:create, :add, :store]
@@ -60,7 +58,6 @@ action :initialize do
       command "/usr/bin/osdmaptool --clobber --create-from-conf /tmp/mon-init/osdmap -c /etc/ceph/ceph.conf"
       action :run
     end
-    
   else
     # get the monmap/osdmap from a running mon
     # TODO
