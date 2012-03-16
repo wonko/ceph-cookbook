@@ -17,7 +17,7 @@ action :format do
 
   ceph_keyring "client.admin" do
     secret get_master_secret
-    not_if "test -e /etc/ceph/client.admin.keyring"
+    action [:create, :add]
   end
 
   execute "Extract the monmap" do
@@ -35,7 +35,7 @@ action :format do
     action :create
   end
 
-  directory "/ceph/osd/#{new_resource.index}" do
+  directory "/ceph/osd/#{node[:ceph][:osd][:index]}" do
     owner "root"
     group "root"
     mode "0755"
