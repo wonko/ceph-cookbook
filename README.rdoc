@@ -1,16 +1,83 @@
 = DESCRIPTION:
 
-Ceph cookbook - ceph.newdream.net
+This cookbook will configure a set of machines to act as a Ceph cluster. It
+is intended to be as easy as possible to configure, and will take a lot of 
+sane defaults to start with.
 
-= REQUIREMENTS:
+Currently, there are some limitations:
 
-Have a correctly setup box - able to connect to the short hostnames (either fix resolv.conf or /etc/hosts)
+* It is only tested on Debian Squeeze 64 bit - but might work on other distro's
+* It depends on the apt-cookbook from Opscode
+* It only configures mons and osds
 
-= ATTRIBUTES:
+The original purpose was to have a set of scripts to quickly deploy a testing
+setup, not to manage a cluster in production.
+
+= CONTENTS:
+
+There are LWRPs for MON, OSD, KEYRING and CONFIG (the MDS is present but 
+non-functional).
 
 = USAGE:
 
-All attributes are namespaced within ceph. (so, node[:ceph][...])
+1. Add this cookbook to your tree, and name it "ceph". We do this as a submodule:
 
-There is a ceph cluster, defined by the 'clustername' attribute. All nodes having the same clustername will join forces.
+     git submodule add user@host:/where/you/pull/from cookbooks/ceph
 
+2. Upload the cookbook to your chef server.
+
+3. Create a role ("cephcluster"), and set at least this attribute:
+
+    [:ceph][:clustername] - set it to a global identifier for this cluster
+
+   Apply this role to all your clusternodes
+
+4. apply the "ceph::mon" recipe to a monitor node, run chef-client there, it should 
+   become the first monitor, and also the "master" which holds the client.admin secret. 
+   Keep the ceph-client running, so it will update the ceph config file as additional 
+   osd-nodes will be added later on...
+
+5. start the mon on the monitor node 
+
+6. Create a role (or update your first role), and define the 
+
+     [:ceph][:osd][:datadevice] - set it to your device where to store the OSD data
+
+   *!!! THIS DEVICE WILL BE FORMATTED (using ext4 for now) !!!*
+
+7. apply the "ceph::osd" recipe to any OSD node
+
+8. start the osds
+
+= IMPROVEMENTS:
+
+This is a work in progress, and anyone is invited to contribute their changes/additions.
+
+Please keep a mindset of KISS and Convention over Configuration!
+
+If you want to work on this, and don't know where to start: 
+* mds (LWRP)
+* multiple odss on a single node
+* radosgw setup (LWRP)
+* rbd management through a LWRP
+
+Get in touch on IRC wonko (kreynet) or wonko_be (oftc).
+
+= LICENSE and AUTHOR:
+
+Author: Bernard Grymonpon (mailto:bernard@openminds.be)
+Author: Openminds BVBA devops team (mailto:info@openminds.be)
+
+Copyright 2009-2012 Openminds BVBA.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
