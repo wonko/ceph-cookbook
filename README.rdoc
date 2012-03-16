@@ -49,6 +49,11 @@ non-functional).
 
 8. start the osds
 
+My ceph role attributes looks like this:
+
+  {"overrides":{"ceph":{"osd":{"datadevice":"/dev/sdb"},"clustername":"office-test"}},"defaults":{}}
+
+
 = IMPROVEMENTS:
 
 This is a work in progress, and anyone is invited to contribute their changes/additions.
