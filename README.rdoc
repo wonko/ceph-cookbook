@@ -29,6 +29,7 @@ non-functional).
 3. Create a role ("cephcluster"), and set at least this attribute:
 
     [:ceph][:clustername] - set it to a global identifier for this cluster
+	[:ceph][:mons] - set it to an array of fqdn names for the mons
 
    Apply this role to all your clusternodes
 
@@ -37,7 +38,7 @@ non-functional).
    Keep the ceph-client running, so it will update the ceph config file as additional 
    osd-nodes will be added later on...
 
-5. start the mon on the monitor node 
+5. run ceph::mon recipe on all other nodes which are mons
 
 6. Create a role (or update your first role), and define the 
 
