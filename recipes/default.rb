@@ -7,14 +7,6 @@ apt_repository "ceph" do
   action :add
 end
 
-# apt_repository "ceph-autobuild-master" do
-#   uri "http://ceph.newdream.net/debian-snapshot-amd64/master"
-#   distribution node['lsb']['codename'] 
-#   components ["main"]
-#   key "https://raw.github.com/ceph/ceph/master/keys/autobuild.asc"
-#   action :add
-# end
-
 package "ceph"
 package "ceph-common"
 

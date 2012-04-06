@@ -53,15 +53,15 @@ execute "umount all possible mounts in /ceph/" do
   only_if "cat /proc/mounts | grep ' /ceph/'"
 end
 
-# umount all possible mounts in /ceph, a bit brutal
-execute "umount all possible mounts in /var/lib/ceph/" do
-  command "cat /proc/mounts | grep ' /var/lib/ceph/' | cut -d' ' -f 2 | xargs umount"
-  only_if "cat /proc/mounts | grep ' /var/lib/ceph/'"
-end
-
 directory "/ceph" do
   recursive true
   action :delete
+end
+
+# umount all possible mounts in /var/lib/ceph, a bit brutal
+execute "umount all possible mounts in /var/lib/ceph/" do
+  command "cat /proc/mounts | grep ' /var/lib/ceph/' | cut -d' ' -f 2 | xargs umount"
+  only_if "cat /proc/mounts | grep ' /var/lib/ceph/'"
 end
 
 directory "/var/lib/ceph" do

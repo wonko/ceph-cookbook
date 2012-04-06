@@ -29,7 +29,7 @@ non-functional).
 3. Create a role ("cephcluster"), and set at least this attribute:
 
     [:ceph][:clustername] - set it to a global identifier for this cluster
-	[:ceph][:mons] - set it to an array of fqdn names for the mons
+    [:ceph][:mons] - set it to an array of fqdn names for the mons
 
    Apply this role to all your clusternodes
 
