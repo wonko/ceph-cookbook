@@ -1,11 +1,8 @@
 # OSD resource
 
-actions :create, :format
+actions :initialize, :start
 
-attribute :index, :kind_of => Integer
 attribute :description, :name_attribute => true
+attribute :index, :kind_of => Integer, :default => -1
+attribute :path, :kind_of => String
 
-# def initialize(*args)
-#   super
-#   @action = :create
-# end

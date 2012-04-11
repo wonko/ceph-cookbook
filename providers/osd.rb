@@ -1,68 +1,51 @@
 # OSD provider
 
-action :create do
-  i = index(:osd)
+# todo: ceph osd crush add <$osdnum> <osd.$osdnum> <weight> host=foo rack=bar [...]
 
-  ceph_keyring "osd.#{i}" do
-    action [:create, :add, :store]
-  end
-end
+action :initialize do
+#  osd_index = @new_resource.index
+  osd_index = node[:ceph][:last_osd_index]
+  osd_path = @new_resource.path
 
-action :format do
-  # force ourselfs to be present in the config file
-  ceph_config "Default ceph config" do
-    action :create
-    i_am_a_osd true
-  end
+  Chef::Log.info("Index is #{osd_index}")
 
-  ceph_keyring "client.admin" do
-    secret get_master_secret
-    action [:create, :add]
-  end
+  journal_path = osd_path + "/journal"
 
   execute "Extract the monmap" do
     command "/usr/bin/ceph mon getmap -o /etc/ceph/monmap"
     action :run
   end
-  
-  # create the mount points for OSD
-  # the journal folder - if you want this mounted, it is up to you
-  directory "/ceph/osdjournals/#{new_resource.index}" do
-    owner "root"
-    group "root"
-    mode "0755"
-    recursive true
-    action :create
-  end
 
-  directory "/ceph/osd/#{node[:ceph][:osd][:index]}" do
-    owner "root"
-    group "root"
-    mode "0755"
-    recursive true
-    action :create
-  end  
-
-  execute "format the datadevice #{node[:ceph][:osd][:datadevice]}" do
-    command "/sbin/mkfs.ext4 -F -q #{node[:ceph][:osd][:datadevice]}"
-    action :run
-    not_if "mount | grep '#{node[:ceph][:osd][:datadevice]}'"
-  end
-
-  mount "/ceph/osd/#{node[:ceph][:osd][:index]}" do
-    device node[:ceph][:osd][:datadevice]
-    fstype "ext4"
-    options "user_xattr"
-    action [:enable, :mount]
-  end
-
-  execute "Create the FS for osd.#{node[:ceph][:osd][:index]}" do
-    command "/usr/bin/ceph-osd -c /etc/ceph/ceph.conf --monmap /etc/ceph/monmap -i #{node[:ceph][:osd][:index]} --mkfs"
+  execute "Create the fs for osd.#{osd_index}" do
+    command "/usr/bin/ceph-osd -i #{osd_index} -c /dev/null --monmap /etc/ceph/monmap --osd-data=#{osd_path} --osd-journal=#{journal_path} --osd-journal-size=250 --mkfs --mkjournal"
     action :run
   end
   
-  execute "Inform the mon(s) of our existance" do
-    command "/usr/bin/ceph auth add osd.#{node[:ceph][:osd][:index]} osd 'allow *' mon 'allow rwx' -i /etc/ceph/osd.#{node[:ceph][:osd][:index]}.keyring"
+  ceph_keyring "osd.#{osd_index}" do
+    action [:create, :add, :store]
+  end
+
+  execute "Change the mon authentication to allow osd.#{osd_index}" do
+    command "/usr/bin/ceph auth add osd.#{osd_index} osd 'allow *' mon 'allow rwx' -i /etc/ceph/osd.#{osd_index}.keyring"
     action :run
   end
+
+  ceph_config "/etc/ceph/osd.#{osd_index}.conf" do
+    osd_data [{:index => osd_index,
+               :journal => journal_path,
+               :journal_size => 250,
+               :data => osd_path}]
+  end
+end
+
+action :start do
+  osd_path = @new_resource.path
+  index = get_osd_index osd_path
+
+  service "osd.#{index}" do
+    supports :restart => true
+    start_command "/etc/init.d/ceph -c /etc/ceph/osd.#{index}.conf start osd.#{index}"
+    action [:start]
+  end
+  
 end

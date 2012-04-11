@@ -9,6 +9,13 @@ service "ceph" do
   ignore_failure true
 end
 
+execute "Killall ceph" do
+  command "killall -9 ceph-mon ceph-osd"
+  action :run
+  ignore_failure true
+end
+
+
 # remove the packages
 %w(ceph ceph-common ceph-fuse libcephfs1 librados2 librbd1 librgw1).each do |pkg|
   package pkg do

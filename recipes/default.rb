@@ -7,9 +7,7 @@ apt_repository "ceph" do
   action :add
 end
 
-package "ceph"
+package "ceph" 
 package "ceph-common"
 
-ceph_config "Default ceph config" do
-  action :create
-end
+ceph_config "/etc/ceph/ceph.conf"

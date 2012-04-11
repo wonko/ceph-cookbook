@@ -1,4 +1,4 @@
-= DESCRIPTION:
+= DESCRIPTION
 
 This cookbook will configure a set of machines to act as a Ceph cluster. It
 is intended to be as easy as possible to configure, and will take a lot of 
@@ -10,15 +10,14 @@ Currently, there are some limitations:
 * It depends on the apt-cookbook from Opscode
 * It only configures mons and osds
 
-The original purpose was to have a set of scripts to quickly deploy a testing
-setup, not to manage a cluster in production.
-
-= CONTENTS:
+= CONTENTS
 
 There are LWRPs for MON, OSD, KEYRING and CONFIG (the MDS is present but 
 non-functional).
 
-= USAGE:
+= USAGE
+
+== General
 
 1. Add this cookbook to your tree, and name it "ceph". We do this as a submodule:
 
@@ -31,39 +30,35 @@ non-functional).
     [:ceph][:clustername] - set it to a global identifier for this cluster
     [:ceph][:mons] - set it to an array of fqdn names for the mons
 
-   Apply this role to all your clusternodes
+   Apply this role to all your clusternodes so the attributes are know to each node.
 
-4. apply the "ceph::mon" recipe to a monitor node, run chef-client there, it should 
+== Monitoring cluster
+
+1. Apply the "ceph::mon" recipe to a monitor node, run chef-client there, it should 
    become the first monitor, and also the "master" which holds the client.admin secret. 
-   Keep the ceph-client running, so it will update the ceph config file as additional 
-   osd-nodes will be added later on...
 
-5. run ceph::mon recipe on all other nodes which are mons
+2. Run ceph::mon recipe on all other nodes which are mons
 
-6. Create a role (or update your first role), and define the 
+3. Verify by running "ceph -w" on any mon-node
 
-     [:ceph][:osd][:datadevice] - set it to your device where to store the OSD data
+== Adding OSDs
 
-   *!!! THIS DEVICE WILL BE FORMATTED (using ext4 for now) !!!*
+OSDs are identified by the LABEL that sits on certain partition or drive. Each device that might be used as a OSD should have this label. Format the block devices (either manual or by creating your own chef recipe) and add a label named "{clustername}.ceph".
 
-7. apply the "ceph::osd" recipe to any OSD node
+  mkfs.btrfs -L ceph.ceph /dev/sdb
+  mkfs.btrfs -L ceph.ceph /dev/sdc
+  mkfs.btrfs -L ceph.ceph /dev/sdd
 
-8. start the osds
+Once done, add the OSD recipe to the node, and run chef-client. The labels will be detected, and the devices will be initialized and started. If the device holds an already initialized osd-structure, it will not re-initialize.
 
-My ceph role attributes looks like this:
-
-  {"overrides":{"ceph":{"osd":{"datadevice":"/dev/sdb"},"clustername":"office-test"}},"defaults":{}}
-
+The OSD daemons are normally started.
 
 = IMPROVEMENTS:
 
 This is a work in progress, and anyone is invited to contribute their changes/additions.
 
-Please keep a mindset of KISS and Convention over Configuration!
-
 If you want to work on this, and don't know where to start: 
 * mds (LWRP)
-* multiple odss on a single node
 * radosgw setup (LWRP)
 * rbd management through a LWRP
 
