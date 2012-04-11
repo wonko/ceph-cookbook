@@ -41,15 +41,7 @@ devices.each do |device|
     fstype "btrfs"
     action [:enable, :mount]
   end
-  
-  # clumsy - I know
-  ruby_block "Determine a new index for the OSD" do
-    block do
-      node[:ceph][:last_osd_index] = %x(/usr/bin/ceph osd create).match(/mon\.\d+ -> '(\d+)' \(\d+\)/).to_a[1].to_i
-      node.save
-    end
-  end
-  
+    
   ceph_osd "Initializing new osd on #{device} - #{uuid}" do
     path osd_path
     action [:initialize]

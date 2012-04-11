@@ -3,7 +3,16 @@
 # todo: ceph osd crush add <$osdnum> <osd.$osdnum> <weight> host=foo rack=bar [...]
 
 action :initialize do
-#  osd_index = @new_resource.index
+  b = ruby_block "Determine a new index for the OSD" do
+    block do
+      node[:ceph][:last_osd_index] = %x(/usr/bin/ceph osd create).match(/mon\.\d+ -> '(\d+)' \(\d+\)/).to_a[1].to_i
+      node.save
+    end
+    action :nothing
+  end
+
+  b.run_action(:create)
+
   osd_index = node[:ceph][:last_osd_index]
   osd_path = @new_resource.path
 
