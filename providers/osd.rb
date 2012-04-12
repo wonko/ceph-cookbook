@@ -18,7 +18,19 @@ action :initialize do
 
   Chef::Log.info("Index is #{osd_index}")
 
-  journal_path = osd_path + "/journal"
+  if node[:ceph][:journal_path]
+    journal_location = node[:ceph][:journal_path] + "/journal.#{osd_index}"
+
+    directory node[:ceph][:journal_path] do
+      owner "root"
+      group "root"
+      mode "0755"
+      recursive true
+      action :create
+    end
+  else
+    journal_location = osd_path + "/journal"
+  end
 
   execute "Extract the monmap" do
     command "/usr/bin/ceph mon getmap -o /etc/ceph/monmap"
@@ -26,7 +38,7 @@ action :initialize do
   end
 
   execute "Create the fs for osd.#{osd_index}" do
-    command "/usr/bin/ceph-osd -i #{osd_index} -c /dev/null --monmap /etc/ceph/monmap --osd-data=#{osd_path} --osd-journal=#{journal_path} --osd-journal-size=250 --mkfs --mkjournal"
+    command "/usr/bin/ceph-osd -i #{osd_index} -c /dev/null --monmap /etc/ceph/monmap --osd-data=#{osd_path} --osd-journal=#{journal_location} --osd-journal-size=250 --mkfs --mkjournal"
     action :run
   end
   
@@ -41,7 +53,7 @@ action :initialize do
 
   ceph_config "/etc/ceph/osd.#{osd_index}.conf" do
     osd_data [{:index => osd_index,
-               :journal => journal_path,
+               :journal => journal_location,
                :journal_size => 250,
                :data => osd_path}]
   end
