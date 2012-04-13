@@ -7,7 +7,10 @@ apt_repository "ceph" do
   action :add
 end
 
-package "ceph" 
-package "ceph-common"
+%w(ceph ceph-common).each do |pkg|
+  package pkg do
+    action :upgrade
+  end
+end
 
 ceph_config "/etc/ceph/ceph.conf"
